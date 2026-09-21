@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -7,7 +7,7 @@ module.exports = {
         .addStringOption(option =>
             option.setName('message')
                 .setDescription('The text or custom emoji format you want the bot to say')
-                .setRequired(false) // Changed to false so you can send JUST an image or JUST an embed
+                .setRequired(false)
         )
         .addAttachmentOption(option =>
             option.setName('image')
@@ -25,7 +25,7 @@ module.exports = {
         const imageAttachment = interaction.options.getAttachment('image');
         const jsonEmbedString = interaction.options.getString('json_embed');
 
-        // Check if the user completely forgot to fill out anything
+        // Stop if everything was left empty
         if (!userMessage && !imageAttachment && !jsonEmbedString) {
             return await interaction.reply({ 
                 content: '❌ You must provide at least a text message, an image, or a JSON embed!', 
@@ -35,22 +35,22 @@ module.exports = {
 
         const replyOptions = {};
 
-        // 1. Handle Text Message
+        // 1. Text handling
         if (userMessage) {
             replyOptions.content = userMessage;
         }
 
-        // 2. Handle Image Upload
+        // 2. Image handling
         if (imageAttachment) {
             replyOptions.files = [imageAttachment.url];
         }
 
-        // 3. Handle JSON Embed parsing
+        // 3. JSON Embed handling
         if (jsonEmbedString) {
             try {
                 const parsedJson = JSON.parse(jsonEmbedString);
-                // Accepts either a single embed object, or a full {"embeds": [...]} JSON block
-                const embedData = parsedJson.embeds ? parsedJson.embeds[0] : parsedJson;
+                // Accepts either a single embed object, or a full {"embeds": [...]} block
+                const embedData = parsedJson.embeds ? parsedJson.embeds : parsedJson;
                 
                 const customEmbed = EmbedBuilder.from(embedData);
                 replyOptions.embeds = [customEmbed];
@@ -62,7 +62,7 @@ module.exports = {
             }
         }
 
-        // Send everything together under the blue command header!
+        // Send everything together under the blue command header
         await interaction.reply(replyOptions);
     },
 };
