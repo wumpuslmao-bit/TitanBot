@@ -1,10 +1,13 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const dbPath = path.join(__dirname, '../../../restrictions.json');
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('say')
         .setDescription('Makes the bot repeat text, upload images, or display JSON embeds')
@@ -25,13 +28,11 @@ module.exports = {
         ),
     
     async execute(interaction) {
-        // 🔒 CHECK DATABASE FOR RESTRICTIONS
         if (fs.existsSync(dbPath)) {
             try {
                 const restrictions = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
                 const requiredRoleId = restrictions['say'];
                 
-                // If a restriction exists and the user doesn't have the role, block them!
                 if (requiredRoleId && !interaction.member.roles.cache.has(requiredRoleId)) {
                     return await interaction.reply({
                         content: '❌ **Access Denied:** You do not have the designated role required to execute this command.',
