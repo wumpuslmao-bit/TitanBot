@@ -1,4 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
+
+const dbPath = path.join(__dirname, '../../../restrictions.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -21,48 +25,44 @@ module.exports = {
         ),
     
     async execute(interaction) {
+        // 🔒 CHECK DATABASE FOR RESTRICTIONS
+        if (fs.existsSync(dbPath)) {
+            try {
+                const restrictions = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+                const requiredRoleId = restrictions['say'];
+                
+                // If a restriction exists and the user doesn't have the role, block them!
+                if (requiredRoleId && !interaction.member.roles.cache.has(requiredRoleId)) {
+                    return await interaction.reply({
+                        content: '❌ **Access Denied:** You do not have the designated role required to execute this command.',
+                        ephemeral: true
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
         const userMessage = interaction.options.getString('message');
         const imageAttachment = interaction.options.getAttachment('image');
         const jsonEmbedString = interaction.options.getString('json_embed');
 
-        // Stop if everything was left empty
         if (!userMessage && !imageAttachment && !jsonEmbedString) {
-            return await interaction.reply({ 
-                content: '❌ You must provide at least a text message, an image, or a JSON embed!', 
-                ephemeral: true 
-            });
+            return await interaction.reply({ content: '❌ You must provide at least text, an image, or a JSON embed!', ephemeral: true });
         }
 
         const replyOptions = {};
+        if (userMessage) replyOptions.content = userMessage;
+        if (imageAttachment) replyOptions.files = [imageAttachment.url];
 
-        // 1. Text handling
-        if (userMessage) {
-            replyOptions.content = userMessage;
-        }
-
-        // 2. Image handling
-        if (imageAttachment) {
-            replyOptions.files = [imageAttachment.url];
-        }
-
-        // 3. JSON Embed handling
         if (jsonEmbedString) {
             try {
                 const parsedJson = JSON.parse(jsonEmbedString);
-                // Accepts either a single embed object, or a full {"embeds": [...]} block
                 const embedData = parsedJson.embeds ? parsedJson.embeds : parsedJson;
-                
-                const customEmbed = EmbedBuilder.from(embedData);
-                replyOptions.embeds = [customEmbed];
+                replyOptions.embeds = [EmbedBuilder.from(embedData)];
             } catch (error) {
-                return await interaction.reply({ 
-                    content: `❌ **Invalid JSON Syntax:**\n\`\`\`${error.message}\`\`\``, 
-                    ephemeral: true 
-                });
+                return await interaction.reply({ content: `❌ **Invalid JSON Syntax:**\n\`\`\`${error.message}\`\`\``, ephemeral: true });
             }
         }
 
-        // Send everything together under the blue command header
         await interaction.reply(replyOptions);
     },
 };
