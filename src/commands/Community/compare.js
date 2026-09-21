@@ -1,10 +1,13 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const dbPath = path.join(__dirname, '../../../restrictions.json');
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('compare')
         .setDescription('Compare stats between two YouTube channels side-by-side')
@@ -20,7 +23,6 @@ module.exports = {
         ),
     
     async execute(interaction) {
-        // 🔒 CHECK DATABASE FOR RESTRICTIONS
         if (fs.existsSync(dbPath)) {
             try {
                 const restrictions = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
