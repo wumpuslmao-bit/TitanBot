@@ -1,8 +1,10 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Setup persistent storage path for Railway
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const dbPath = path.join(__dirname, '../../../restrictions.json');
 
 function saveRestriction(commandName, roleId) {
@@ -14,7 +16,7 @@ function saveRestriction(commandName, roleId) {
     fs.writeFileSync(dbPath, JSON.stringify(data, null, 4));
 }
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('restrict')
         .setDescription('Assign a specific command to a specific role')
@@ -32,7 +34,7 @@ module.exports = {
                     { name: 'compare', value: 'compare' }
                 )
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator), // Admin only command
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
         const selectedRole = interaction.options.getRole('target_role');
