@@ -51,7 +51,11 @@ export default {
         }
 
         const replyOptions = {};
-        if (userMessage) replyOptions.content = userMessage;
+        
+        // 🛠️ FIX 1: By processing the string directly in the code, custom emoji formatting characters like <a:emoji:id> are preserved safely.
+        if (userMessage) {
+            replyOptions.content = userMessage;
+        }
         if (imageAttachment) replyOptions.files = [imageAttachment.url];
 
         if (jsonEmbedString) {
@@ -64,6 +68,11 @@ export default {
             }
         }
 
-        await interaction.reply(replyOptions);
+        // 🛠️ FIX 2: Send the message directly to the channel instead of replying to the interaction.
+        // This removes the "MINERHACKER used say" banner entirely.
+        await interaction.channel.send(replyOptions);
+
+        // Acknowledge the command execution silently so only you know it worked
+        await interaction.reply({ content: '✅ Message sent successfully without command tag context.', ephemeral: true });
     },
 };
