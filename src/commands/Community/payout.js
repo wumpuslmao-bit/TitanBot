@@ -1,11 +1,11 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 
-module.exports = {
-    // 1. Setup the command registration details
+export default {
+    // 1. Setup the command registration details matching your bot's system
     data: new SlashCommandBuilder()
         .setName('payout')
         .setDescription('Sends formatted Minecraft account details and tags the user.')
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages) // 🔒 ONLY staff/moderators can use this command
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages) // 🔒 Staff only
         .addStringOption(option =>
             option.setName('account')
                 .setDescription('Enter details in format email:pass')
@@ -15,7 +15,7 @@ module.exports = {
                 .setDescription('Select the user to ping')
                 .setRequired(true)),
 
-    // 2. Setup the logic when the command runs
+    // 2. Main command logic
     async execute(interaction) {
         const inputCombo = interaction.options.getString('account');
         const targetUser = interaction.options.getUser('user');
@@ -23,20 +23,20 @@ module.exports = {
         // Split the combo into email and password at the first colon
         const parts = inputCombo.split(':');
         
-        // Validation check for proper formatting
+        // Safety check for correct format
         if (parts.length < 2) {
-            return interaction.reply({ 
+            return await interaction.reply({ 
                 content: '❌ **Invalid format!** Please use the `email:pass` format structure.', 
                 ephemeral: true 
             });
         }
 
         const email = parts[0];
-        const password = parts.slice(1).join(':'); // Handles passwords that contain colons
+        const password = parts.slice(1).join(':'); // Handles passwords with colons safely
 
-        // Build a clean, styled Discord Embed block
+        // Build a highly stylized Discord Embed box
         const payoutEmbed = new EmbedBuilder()
-            .setColor('#2ecc71') // Clean Green Accent
+            .setColor('#2ecc71') // Green success theme
             .setTitle('<a:MINECRAFT:1552272708610297860> Minecraft Full Access (MCFA) Delivery')
             .setDescription(`Here are your account credentials. Click the black bars below to reveal them safely!`)
             .addFields(
@@ -51,7 +51,7 @@ module.exports = {
             .setFooter({ text: 'TitanBot Payout System' })
             .setTimestamp();
 
-        // Send the output message while tagging the target user outside the embed
+        // Sends message to the channel and pings the specific user
         await interaction.reply({ 
             content: `👋 ${targetUser}, your payout is ready!`, 
             embeds: [payoutEmbed] 
