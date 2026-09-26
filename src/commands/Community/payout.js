@@ -1,60 +1,76 @@
-import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const dbPath = path.join(__dirname, '../../../restrictions.json');
 
 export default {
-    // 1. Setup the command registration details matching your bot's system
     data: new SlashCommandBuilder()
         .setName('payout')
         .setDescription('Sends formatted Minecraft account details and tags the user.')
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages) // 🔒 Staff only
         .addStringOption(option =>
-            option.setName('account')
-                .setDescription('Enter details in format email:pass')
+            option.setName('email')
+                .setDescription('The account email')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('pass')
+                .setDescription('The account password')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('combo')
+                .setDescription('The email:pass combo string')
                 .setRequired(true))
         .addUserOption(option =>
             option.setName('user')
-                .setDescription('Select the user to ping')
+                .setDescription('The user to ping')
                 .setRequired(true)),
 
-    // 2. Main command logic
     async execute(interaction) {
-        const inputCombo = interaction.options.getString('account');
-        const targetUser = interaction.options.getUser('user');
-
-        // Split the combo into email and password at the first colon
-        const parts = inputCombo.split(':');
-        
-        // Safety check for correct format
-        if (parts.length < 2) {
-            return await interaction.reply({ 
-                content: '❌ **Invalid format!** Please use the `email:pass` format structure.', 
-                ephemeral: true 
-            });
+        // Role restrictions safety check from your codebase
+        if (fs.existsSync(dbPath)) {
+            try {
+                const restrictions = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+                const requiredRoleId = restrictions['payout'] || restrictions['say']; // checks payout or say role rules
+                
+                if (requiredRoleId && !interaction.member.roles.cache.has(requiredRoleId)) {
+                    return await interaction.reply({
+                        content: '❌ **Access Denied:** You do not have the designated role required to execute this command.',
+                        ephemeral: true
+                    });
+                }
+            } catch (e) { console.error(e); }
         }
 
-        const email = parts[0];
-        const password = parts.slice(1).join(':'); // Handles passwords with colons safely
+        // Pull the individual parameters from the command arguments
+        const email = interaction.options.getString('email');
+        const pass = interaction.options.getString('pass');
+        const combo = interaction.options.getString('combo');
+        const targetUser = interaction.options.getUser('user');
 
-        // Build a highly stylized Discord Embed box
-        const payoutEmbed = new EmbedBuilder()
-            .setColor('#2ecc71') // Green success theme
-            .setTitle('<a:MINECRAFT:1552272708610297860> Minecraft Full Access (MCFA) Delivery')
-            .setDescription(`Here are your account credentials. Click the black bars below to reveal them safely!`)
-            .addFields(
-                { name: '<a:email:1537480214634831963> Email', value: `||\`\${email}\`||`, inline: false },
-                { name: '<a:password:1532425179991511040> Password', value: `||\`\${password}\`||`, inline: false },
-                { name: '📋 Full Combo String', value: `||\`\${inputCombo}\`||`, inline: false }
-            )
-            .addFields(
-                { name: '❓ ARE WE <a:legit:1440572514291028038>?', value: '⚡ **MAKE SURE TO VOUCH IF IT WORKS!**', inline: false },
-                { name: '✍️ How to Vouch:', value: '`Vouch (ping me @minehack_. ) for permenant mcfa LEGITTT`', inline: false }
-            )
-            .setFooter({ text: 'TitanBot Payout System' })
-            .setTimestamp();
+        // Construct your text block exactly as requested with Nitro formatting
+        const outputMessage = 
+`# <a:minecraft:1545768000836345987> Here is your (hopefully) permenant MCFA! <a:minecraft:1545768000836345987> 
+** 📬 Email: ||\`\${email}\`||**
+**  🔑 Pass: ||\`\${pass}\`||**
+** <a:minecraft:1545768000836345987> Combo: ||\`\${combo}\`||**
+# ARE WE <a:legit:1553335710583492648> ? 
+# <a:minecraft:1545768000836345987> MAKE SURE TO VOUCH IF WORKS <a:minecraft:1545768000836345987> 
+**Type:**
+#  **\`Vouch (ping me @minehack_. ) for permenant mcfa LEGITTT\`**
+-# Ping: ${targetUser}`;
 
-        // Sends message to the channel and pings the specific user
-        await interaction.reply({ 
-            content: `👋 ${targetUser}, your payout is ready!`, 
-            embeds: [payoutEmbed] 
-        });
+        try {
+            // 🛠️ FIX: Send directly to the channel to hide who triggered the command
+            await interaction.channel.send({ content: outputMessage });
+
+            // Silently acknowledge to the command author that it worked
+            await interaction.reply({ content: '✅ Payout details deployed successfully!', ephemeral: true });
+        } catch (error) {
+            console.error(error);
+            await interaction.reply({ content: '❌ Failed to deploy message. Verify bot application permissions.', ephemeral: true });
+        }
     },
 };
